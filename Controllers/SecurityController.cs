@@ -1,5 +1,4 @@
 ﻿using AutoWrapper.Wrappers;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PassCodeManager.DTO.RequestObjects;
 using PassCodeManager.Services.Abstract;
@@ -16,8 +15,8 @@ namespace PassCodeManager.Controllers
             _securityService = securityService;
         }
 
-        [HttpPost("/AddPasscode")]
-        public async Task<ApiResponse> AddPassCode(AddPasscodeObject passcodeObject)
+        [HttpPost("AddPasscode")]
+        public async Task<ApiResponse> AddPassCode([FromBody]AddPasscodeObject passcodeObject)
         {
             try
             {
@@ -30,12 +29,26 @@ namespace PassCodeManager.Controllers
             }
         }
 
-        [HttpGet("GetPassCode/{Mobile}")]
+        [HttpGet("GetPasscode/{Mobile}")]
         public async Task<ApiResponse> GetPassCodesByMobile(string Mobile)
         {
             try
             {
                 var result = await _securityService.GetPassCodesByMobile(Mobile);
+                return new ApiResponse(result);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message, ex);
+            }
+        }
+
+        [HttpPut("UpdatePasscode")]
+        public async Task<ApiResponse> UpdatePassCode([FromBody]UpdatePasscodeObject request)
+        {
+            try
+            {
+                var result = await _securityService.UpdatePassCode(request);
                 return new ApiResponse(result);
             }
             catch (Exception ex)

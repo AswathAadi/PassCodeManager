@@ -7,5 +7,6 @@ namespace PassCodeManager.Services.Abstract
     {
         Task<SecurityResponseObject> AddPasscode(AddPasscodeObject passcodeObject);
         Task<Dictionary<string, string>> GetPassCodesByMobile(string mobile);
+        Task<SecurityResponseObject> UpdatePassCode(UpdatePasscodeObject request);
     }
 }

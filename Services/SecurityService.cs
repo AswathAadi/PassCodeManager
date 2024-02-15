@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoWrapper.Wrappers;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using PassCodeManager.Classified.DBcontext;
 using PassCodeManager.Classified.Entities;
 using PassCodeManager.DTO.RequestObjects;
@@ -82,6 +84,8 @@ namespace PassCodeManager.Services
                 Dictionary<string, string> passCodes = new Dictionary<string, string>();
                 var EncryptedPasscode = await _context.SecurityKeys.Include(x => x.HasPassCodes).FirstOrDefaultAsync(x => x.Mobile == mobile);
 
+                if (EncryptedPasscode == null) throw new Exception("Invalid Mobile Number");
+
                 foreach (var EncryptedString in EncryptedPasscode.HasPassCodes)
                 {
                     byte[] encryptedBytes = Convert.FromBase64String(EncryptedString.PassCode);
@@ -105,5 +109,40 @@ namespace PassCodeManager.Services
                 throw new Exception(ex.Message, ex);
             }
         }
+
+        public async Task<SecurityResponseObject> UpdatePassCode(UpdatePasscodeObject request)
+        {
+            try
+            {
+                var passCodeEntity = await _context.PassCodes.FirstOrDefaultAsync(x => x.Id == request.Id);
+                if (passCodeEntity == null) throw new Exception("Passcode Id is Invalid.");
+
+                byte[] publicKeyBytes = Convert.FromBase64String(passCodeEntity.SecurityKeys.PublicKey);
+
+                using (RSA rsa = RSA.Create())
+                {
+                    rsa.ImportRSAPublicKey(publicKeyBytes, out _);
+
+                    byte[] originalBytes = Encoding.UTF8.GetBytes(request.PassCode);
+                    byte[] encryptedBytes = rsa.Encrypt(originalBytes, RSAEncryptionPadding.OaepSHA256);
+                    string encryptedString = Convert.ToBase64String(encryptedBytes);
+                    passCodeEntity.PassCode = encryptedString;
+                }
+
+
+                await _context.AddAsync(passCodeEntity);
+
+                await _context.Database.CommitTransactionAsync();
+
+                await _context.SaveChangesAsync();
+
+                return new SecurityResponseObject();
+            }
+            catch (Exception ex)
+            {
+                await _context.Database.RollbackTransactionAsync();
+                throw new Exception(ex.Message, ex);
+            }
+        } 
     }
 }
